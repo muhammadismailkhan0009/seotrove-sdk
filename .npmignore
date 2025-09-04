@@ -1,0 +1,37 @@
+# Source files (built files are in dist/)
+src/
+*.ts
+!*.d.ts
+
+# Build configuration
+tsconfig.json
+tsup.config.ts
+.tsbuildinfo
+
+# Development files
+node_modules/
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Testing
+*.test.*
+*.spec.*
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lockfiles (let users choose their package manager)
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
