@@ -134,6 +134,38 @@ export class ContentScheduler {
         await fetcher.syncContent();
     }
 
+    async syncNewContent(id: string): Promise<void> {
+        const fetcher = this.fetchers.get(id);
+        if (!fetcher) {
+            throw new Error(`[ContentScheduler] Fetcher ${id} not found`);
+        }
+        await fetcher.syncNewContentOnly();
+    }
+
+    async syncPreviousContent(id: string): Promise<void> {
+        const fetcher = this.fetchers.get(id);
+        if (!fetcher) {
+            throw new Error(`[ContentScheduler] Fetcher ${id} not found`);
+        }
+        await fetcher.syncPreviousContentOnly();
+    }
+
+    async syncAllContent(id: string): Promise<void> {
+        const fetcher = this.fetchers.get(id);
+        if (!fetcher) {
+            throw new Error(`[ContentScheduler] Fetcher ${id} not found`);
+        }
+        await fetcher.syncAllContent();
+    }
+
+    resetFirstSyncFlag(id: string): void {
+        const fetcher = this.fetchers.get(id);
+        if (!fetcher) {
+            throw new Error(`[ContentScheduler] Fetcher ${id} not found`);
+        }
+        fetcher.resetFirstSyncFlag();
+    }
+
     async syncAll(): Promise<void> {
         const promises = Array.from(this.fetchers.entries()).map(async ([id, fetcher]) => {
             try {

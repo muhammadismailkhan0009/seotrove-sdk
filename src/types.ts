@@ -6,7 +6,6 @@ export interface ContentApiResponse {
 
 export interface ContentPage {
     urlPath: string;
-    title: string;
     html: string;
 }
 

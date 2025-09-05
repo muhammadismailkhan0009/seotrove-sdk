@@ -10,6 +10,7 @@ if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
 export class ContentFetcher {
     private config: ContentFetcherConfig;
     private intervalId: NodeJS.Timeout | null = null;
+    private isFirstSync: boolean = true;
 
     constructor(config: ContentFetcherConfig) {
         this.config = config;
@@ -18,20 +19,106 @@ export class ContentFetcher {
     async fetchContent(): Promise<ContentApiResponse> {
         const url = `https://api.seotrove.com/api/v1/sdk/${this.config.domain}/content?installId=${this.config.installId}`;
 
-        console.log(`[${this.config.domain}] Fetching content from: ${url}`);
+        console.log(`[${this.config.domain}] Fetching new content from: ${url}`);
 
         try {
             const response = await fetch(url);
 
             if (!response.ok) {
+                // Handle the "No generated pages to publish" case
+                if (response.status === 404) {
+                    const errorData = await response.json().catch(() => ({})) as any;
+                    if (errorData.error === "No generated pages to publish.") {
+                        console.log(`[${this.config.domain}] No new content available to sync`);
+                        return {
+                            sitemapXml: '',
+                            robotTxt: '',
+                            pages: []
+                        };
+                    }
+                }
                 throw new Error(`API request failed: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json() as ContentApiResponse;
-            console.log(`[${this.config.domain}] Content fetched successfully - ${data.pages?.length || 0} pages`);
+            console.log(`[${this.config.domain}] New content fetched successfully - ${data.pages?.length || 0} pages`);
             return data;
         } catch (error) {
-            throw new Error(`Failed to fetch content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error(`Failed to fetch new content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async fetchPreviouslyPublishedContent(): Promise<ContentApiResponse> {
+        const url = `https://api.seotrove.com/api/v1/sdk/${this.config.domain}/content/previously-published?installId=${this.config.installId}`;
+
+        console.log(`[${this.config.domain}] Fetching previously published content from: ${url}`);
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                // Handle the "No generated pages to publish" case
+                if (response.status === 404) {
+                    const errorData = await response.json().catch(() => ({})) as any;
+                    if (errorData.error === "No generated pages to publish.") {
+                        console.log(`[${this.config.domain}] No previously published content available`);
+                        return {
+                            sitemapXml: '',
+                            robotTxt: '',
+                            pages: []
+                        };
+                    }
+                }
+                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json() as ContentApiResponse;
+            console.log(`[${this.config.domain}] Previously published content fetched successfully - ${data.pages?.length || 0} pages`);
+            return data;
+        } catch (error) {
+            throw new Error(`Failed to fetch previously published content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async fetchAllContent(): Promise<ContentApiResponse> {
+        console.log(`[${this.config.domain}] Fetching all content (new + previously published)...`);
+
+        try {
+            // Fetch both new and previously published content in parallel
+            // Handle cases where one might fail (404) but the other succeeds
+            const [newContentResult, previousContentResult] = await Promise.allSettled([
+                this.fetchContent(),
+                this.fetchPreviouslyPublishedContent()
+            ]);
+
+            // Get successful results or empty content for failed ones
+            const newContent = newContentResult.status === 'fulfilled' 
+                ? newContentResult.value 
+                : { sitemapXml: '', robotTxt: '', pages: [] };
+
+            const previousContent = previousContentResult.status === 'fulfilled' 
+                ? previousContentResult.value 
+                : { sitemapXml: '', robotTxt: '', pages: [] };
+
+            // Log any failures
+            if (newContentResult.status === 'rejected') {
+                console.log(`[${this.config.domain}] New content fetch failed: ${newContentResult.reason}`);
+            }
+            if (previousContentResult.status === 'rejected') {
+                console.log(`[${this.config.domain}] Previously published content fetch failed: ${previousContentResult.reason}`);
+            }
+
+            // Merge the content
+            const mergedContent: ContentApiResponse = {
+                sitemapXml: newContent.sitemapXml || previousContent.sitemapXml,
+                robotTxt: newContent.robotTxt || previousContent.robotTxt,
+                pages: [...(previousContent.pages || []), ...(newContent.pages || [])]
+            };
+
+            console.log(`[${this.config.domain}] All content merged successfully - Total: ${mergedContent.pages?.length || 0} pages (${previousContent.pages?.length || 0} previous + ${newContent.pages?.length || 0} new)`);
+            return mergedContent;
+        } catch (error) {
+            throw new Error(`Failed to fetch all content: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -92,7 +179,7 @@ export class ContentFetcher {
                         console.log(`[${this.config.domain}] Created page: ${relativePath}`);
 
                     } catch (pageError) {
-                        const errorMsg = `Failed to create page ${page.title}: ${pageError instanceof Error ? pageError.message : 'Unknown error'}`;
+                        const errorMsg = `Failed to create page ${page.urlPath}: ${pageError instanceof Error ? pageError.message : 'Unknown error'}`;
                         errors.push(errorMsg);
                         console.error(`[${this.config.domain}] ${errorMsg}`);
                     }
@@ -136,8 +223,28 @@ export class ContentFetcher {
         try {
             console.log(`[${this.config.domain}] Starting content sync...`);
 
-            const content = await this.fetchContent();
+            let content: ContentApiResponse;
+
+            if (this.isFirstSync) {
+                console.log(`[${this.config.domain}] First sync - attempting to fetch all content...`);
+                try {
+                    content = await this.fetchAllContent();
+                } catch (error) {
+                    console.log(`[${this.config.domain}] Failed to fetch all content on first sync, falling back to new content only: ${error}`);
+                    content = await this.fetchContent();
+                }
+            } else {
+                console.log(`[${this.config.domain}] Subsequent sync - fetching new content only...`);
+                content = await this.fetchContent();
+            }
+
             const result = await this.createFiles(content);
+
+            // Mark that first sync is complete
+            if (this.isFirstSync) {
+                this.isFirstSync = false;
+                console.log(`[${this.config.domain}] First sync completed - future syncs will only fetch new content`);
+            }
 
             const duration = Date.now() - startTime;
             console.log(`[${this.config.domain}] Sync completed: ${result.message} (Total: ${duration}ms)`);
@@ -146,6 +253,87 @@ export class ContentFetcher {
         } catch (error) {
             const duration = Date.now() - startTime;
             const errorMsg = `Content sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error(`[${this.config.domain}] ${errorMsg} (${duration}ms)`);
+
+            return {
+                success: false,
+                message: errorMsg,
+                filesCreated: [],
+                errors: [errorMsg]
+            };
+        }
+    }
+
+    async syncNewContentOnly(): Promise<SyncResult> {
+        const startTime = Date.now();
+
+        try {
+            console.log(`[${this.config.domain}] Starting new content sync...`);
+
+            const content = await this.fetchContent();
+            const result = await this.createFiles(content);
+
+            const duration = Date.now() - startTime;
+            console.log(`[${this.config.domain}] New content sync completed: ${result.message} (Total: ${duration}ms)`);
+            return result;
+
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            const errorMsg = `New content sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error(`[${this.config.domain}] ${errorMsg} (${duration}ms)`);
+
+            return {
+                success: false,
+                message: errorMsg,
+                filesCreated: [],
+                errors: [errorMsg]
+            };
+        }
+    }
+
+    async syncPreviousContentOnly(): Promise<SyncResult> {
+        const startTime = Date.now();
+
+        try {
+            console.log(`[${this.config.domain}] Starting previously published content sync...`);
+
+            const content = await this.fetchPreviouslyPublishedContent();
+            const result = await this.createFiles(content);
+
+            const duration = Date.now() - startTime;
+            console.log(`[${this.config.domain}] Previously published content sync completed: ${result.message} (Total: ${duration}ms)`);
+            return result;
+
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            const errorMsg = `Previously published content sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error(`[${this.config.domain}] ${errorMsg} (${duration}ms)`);
+
+            return {
+                success: false,
+                message: errorMsg,
+                filesCreated: [],
+                errors: [errorMsg]
+            };
+        }
+    }
+
+    async syncAllContent(): Promise<SyncResult> {
+        const startTime = Date.now();
+
+        try {
+            console.log(`[${this.config.domain}] Starting full content sync (new + previously published)...`);
+
+            const content = await this.fetchAllContent();
+            const result = await this.createFiles(content);
+
+            const duration = Date.now() - startTime;
+            console.log(`[${this.config.domain}] Full content sync completed: ${result.message} (Total: ${duration}ms)`);
+            return result;
+
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            const errorMsg = `Full content sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
             console.error(`[${this.config.domain}] ${errorMsg} (${duration}ms)`);
 
             return {
@@ -193,6 +381,34 @@ export class ContentFetcher {
 
     updateConfig(newConfig: Partial<ContentFetcherConfig>): void {
         this.config = { ...this.config, ...newConfig };
+    }
+
+    resetFirstSyncFlag(): void {
+        this.isFirstSync = true;
+        console.log(`[${this.config.domain}] First sync flag reset - next sync will fetch all content`);
+    }
+
+    isFirstSyncPending(): boolean {
+        return this.isFirstSync;
+    }
+
+    // Alias for better naming consistency - checks if this is the first sync
+    checkIsFirstSync(): boolean {
+        return this.isFirstSync;
+    }
+
+    /**
+     * Manually sync only previously published content
+     */
+    async syncWithPreviousContent(): Promise<SyncResult> {
+        return this.syncPreviousContentOnly();
+    }
+
+    /**
+     * Manually sync both new and previously published content
+     */
+    async syncAllContentManual(): Promise<SyncResult> {
+        return this.syncAllContent();
     }
 
     private sanitizeFileName(filename: string): string {
