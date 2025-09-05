@@ -162,9 +162,15 @@ export class ContentFetcher {
             if (content.pages && Array.isArray(content.pages)) {
                 for (const page of content.pages) {
                     try {
+                        // Ensure urlPath has .html extension
+                        let urlPath = page.urlPath;
+                        if (!urlPath.endsWith('.html')) {
+                            urlPath = urlPath + '.html';
+                        }
+
                         // Split urlPath into directory and filename
-                        const pageDir = path.dirname(page.urlPath);
-                        const pageFileName = path.basename(page.urlPath);
+                        const pageDir = path.dirname(urlPath);
+                        const pageFileName = path.basename(urlPath);
 
                         // Create the full directory path
                         const fullDir = pageDir === '.' ? baseDir : path.join(baseDir, pageDir);
