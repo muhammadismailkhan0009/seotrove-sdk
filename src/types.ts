@@ -11,7 +11,7 @@ export interface ContentPage {
 
 export interface ContentFetcherConfig {
     domain: string;
-    installId: string;
+    apiKey: string;
     targetDirectory?: string;
     apiBaseUrl?: string;
 }

@@ -31,7 +31,7 @@ import { ContentFetcher, SeoTroveNotFoundError } from "@myriadcodelabs/seotrove-
 
 const seoTrove = new ContentFetcher({
   domain: "your-domain.com",
-  installId: process.env.SEOTROVE_INSTALL_ID!,
+  apiKey: process.env.SEOTROVE_API_KEY!,
 });
 
 try {
@@ -55,7 +55,7 @@ const robotsTxt = await seoTrove.getRobots();
 ```
 
 The SDK is intended to run on the target website server. Do not expose
-`installId` in browser-side JavaScript.
+`apiKey` in browser-side JavaScript.
 
 ## Setup with Vite React (Server-Side)
 
@@ -79,7 +79,7 @@ const router = express.Router();
 
 const contentFetcher = new ContentFetcher({
   domain: "your-domain.com",
-  installId: "your-install-id",
+  apiKey: "your-api-key",
   targetDirectory: "./public",
 });
 
@@ -119,7 +119,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 const contentFetcher = new ContentFetcher({
   domain: "your-domain.com",
-  installId: "your-install-id",
+  apiKey: "your-api-key",
   targetDirectory: "./public",
 });
 
@@ -192,7 +192,7 @@ import { ContentFetcher } from "@myriadcodelabs/seotrove-sdk";
 
 const fetcher = new ContentFetcher({
   domain: "your-domain.com",
-  installId: "your-install-id",
+  apiKey: "your-api-key",
   targetDirectory: "./public",
 });
 
@@ -214,7 +214,7 @@ import { ContentFetcher, ContentScheduler } from "@myriadcodelabs/seotrove-sdk";
 
 const fetcher = new ContentFetcher({
   domain: "your-domain.com",
-  installId: "your-install-id",
+  apiKey: "your-api-key",
   targetDirectory: "./public",
 });
 
@@ -234,13 +234,13 @@ const scheduler = new ContentScheduler();
 // Add multiple content fetchers
 scheduler.addFetcher("domain1", {
   domain: "domain1.com",
-  installId: "install-id-1",
+  apiKey: "api-key-1",
   targetDirectory: "./public/domain1",
 });
 
 scheduler.addFetcher("domain2", {
   domain: "domain2.com",
-  installId: "install-id-2",
+  apiKey: "api-key-2",
   targetDirectory: "./public/domain2",
 });
 
@@ -286,7 +286,7 @@ const cleanName = FileManager.sanitizeFileName("unsafe/file:name.txt");
 ```typescript
 interface ContentFetcherConfig {
   domain: string; // Your domain name
-  installId: string; // Installation ID from SEOTrove
+  apiKey: string; // Public delivery API key from SeoTrove
   targetDirectory: string; // Directory to save content
 }
 ```

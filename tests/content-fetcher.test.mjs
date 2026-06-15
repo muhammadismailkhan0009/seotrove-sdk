@@ -10,8 +10,8 @@ afterEach(() => {
 
 test('getContent calls the slug endpoint and maps ready content', async () => {
   const calls = [];
-  globalThis.fetch = async (url) => {
-    calls.push(String(url));
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), headers: init?.headers });
     return new Response(JSON.stringify({
       domain: 'example.com',
       slug: 'ready-page',
@@ -26,14 +26,15 @@ test('getContent calls the slug endpoint and maps ready content', async () => {
 
   const fetcher = new ContentFetcher({
     domain: 'example.com',
-    installId: 'install 1',
+    apiKey: 'api-key-1',
     apiBaseUrl: 'https://api.test'
   });
 
   const content = await fetcher.getContent({ slug: 'ready-page' });
 
   assert.equal(content.slug, 'ready-page');
-  assert.equal(calls[0], 'https://api.test/api/v1/sdk/example.com/content/ready-page?installId=install%201');
+  assert.equal(calls[0].url, 'https://api.test/api/v1/sdk/example.com/content/ready-page');
+  assert.equal(calls[0].headers['X-SeoTrove-Api-Key'], 'api-key-1');
 });
 
 test('getContent surfaces public absence as SeoTroveNotFoundError', async () => {
@@ -41,7 +42,7 @@ test('getContent surfaces public absence as SeoTroveNotFoundError', async () => 
 
   const fetcher = new ContentFetcher({
     domain: 'example.com',
-    installId: 'install-1',
+    apiKey: 'api-key-1',
     apiBaseUrl: 'https://api.test'
   });
 
@@ -53,22 +54,28 @@ test('getContent surfaces public absence as SeoTroveNotFoundError', async () => 
 
 test('getSitemap and getRobots call read-only public routes', async () => {
   const calls = [];
-  globalThis.fetch = async (url) => {
-    calls.push(String(url));
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), headers: init?.headers });
     return new Response(calls.length === 1 ? '<urlset />' : 'User-agent: *', { status: 200 });
   };
 
   const fetcher = new ContentFetcher({
     domain: 'example.com',
-    installId: 'install-1',
+    apiKey: 'api-key-1',
     apiBaseUrl: 'https://api.test'
   });
 
   assert.equal(await fetcher.getSitemap(), '<urlset />');
   assert.equal(await fetcher.getRobots(), 'User-agent: *');
   assert.deepEqual(calls, [
-    'https://api.test/api/v1/sdk/example.com/sitemap?installId=install-1',
-    'https://api.test/api/v1/sdk/example.com/robots?installId=install-1'
+    {
+      url: 'https://api.test/api/v1/sdk/example.com/sitemap',
+      headers: { 'X-SeoTrove-Api-Key': 'api-key-1' }
+    },
+    {
+      url: 'https://api.test/api/v1/sdk/example.com/robots',
+      headers: { 'X-SeoTrove-Api-Key': 'api-key-1' }
+    }
   ]);
-  assert.ok(calls.every((url) => !url.includes('previously-published')));
+  assert.ok(calls.every((call) => !call.url.includes('previously-published')));
 });

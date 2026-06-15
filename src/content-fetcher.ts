@@ -27,7 +27,7 @@ export class ContentFetcher {
     async getContent(request: PublicContentRequest): Promise<PublicContentPage> {
         const domain = request.domain ?? this.config.domain;
         const url = this.sdkUrl(domain, `content/${encodeURIComponent(request.slug)}`);
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: this.authHeaders() });
 
         if (response.status === 404) {
             throw new SeoTroveNotFoundError(`No ready SeoTrove content found for ${domain}/${request.slug}`);
@@ -55,7 +55,7 @@ export class ContentFetcher {
         console.log(`[${this.config.domain}] Fetching new content from: ${url}`);
 
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, { headers: this.authHeaders() });
 
             if (!response.ok) {
                 // Handle the "No generated pages to publish" case
@@ -87,7 +87,7 @@ export class ContentFetcher {
         console.log(`[${this.config.domain}] Fetching previously published content from: ${url}`);
 
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, { headers: this.authHeaders() });
 
             if (!response.ok) {
                 // Handle the "No generated pages to publish" case
@@ -462,7 +462,7 @@ export class ContentFetcher {
     }
 
     private async fetchTextRoute(domain: string, route: string, label: string): Promise<string> {
-        const response = await fetch(this.sdkUrl(domain, route));
+        const response = await fetch(this.sdkUrl(domain, route), { headers: this.authHeaders() });
 
         if (response.status === 404) {
             throw new SeoTroveNotFoundError(`SeoTrove ${label} was not found for ${domain}`);
@@ -476,6 +476,12 @@ export class ContentFetcher {
 
     private sdkUrl(domain: string, route: string): string {
         const baseUrl = (this.config.apiBaseUrl ?? 'https://api.seotrove.com').replace(/\/$/, '');
-        return `${baseUrl}/api/v1/sdk/${encodeURIComponent(domain)}/${route}?installId=${encodeURIComponent(this.config.installId)}`;
+        return `${baseUrl}/api/v1/sdk/${encodeURIComponent(domain)}/${route}`;
+    }
+
+    private authHeaders(): Record<string, string> {
+        return {
+            'X-SeoTrove-Api-Key': this.config.apiKey
+        };
     }
 }
