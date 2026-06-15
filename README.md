@@ -1,4 +1,4 @@
-# seotrove-sdk
+# @myriadcodelabs/seotrove-sdk
 
 A server-side TypeScript SDK for retrieving SeoTrove public content, sitemap XML,
 and robots.txt.
@@ -7,13 +7,13 @@ and robots.txt.
 
 ```bash
 # Using npm
-npm install seotrove-sdk
+npm install @myriadcodelabs/seotrove-sdk
 
 # Using pnpm
-pnpm add seotrove-sdk
+pnpm add @myriadcodelabs/seotrove-sdk
 
 # Using yarn
-yarn add seotrove-sdk
+yarn add @myriadcodelabs/seotrove-sdk
 ```
 
 ## Features
@@ -27,7 +27,7 @@ yarn add seotrove-sdk
 ## Public Delivery Usage
 
 ```typescript
-import { ContentFetcher, SeoTroveNotFoundError } from "seotrove-sdk";
+import { ContentFetcher, SeoTroveNotFoundError } from "@myriadcodelabs/seotrove-sdk";
 
 const seoTrove = new ContentFetcher({
   domain: "your-domain.com",
@@ -64,7 +64,7 @@ Since this SDK is designed for server-side operations, you'll typically use it i
 ### 1. Install the SDK
 
 ```bash
-pnpm add seotrove-sdk
+pnpm add @myriadcodelabs/seotrove-sdk
 ```
 
 ### 2. Create an API route (for Vite React with Express backend)
@@ -73,7 +73,7 @@ Create `server/api/content-sync.js`:
 
 ```typescript
 import express from "express";
-import { ContentFetcher, ContentScheduler } from "seotrove-sdk";
+import { ContentFetcher, ContentScheduler } from "@myriadcodelabs/seotrove-sdk";
 
 const router = express.Router();
 
@@ -114,7 +114,7 @@ export default router;
 Create `pages/api/content-sync.ts` or `app/api/content-sync/route.ts`:
 
 ```typescript
-import { ContentFetcher, ContentScheduler } from "seotrove-sdk";
+import { ContentFetcher, ContentScheduler } from "@myriadcodelabs/seotrove-sdk";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 const contentFetcher = new ContentFetcher({
@@ -188,7 +188,7 @@ export default ContentSyncButton;
 ### ContentFetcher
 
 ```typescript
-import { ContentFetcher } from "seotrove-sdk";
+import { ContentFetcher } from "@myriadcodelabs/seotrove-sdk";
 
 const fetcher = new ContentFetcher({
   domain: "your-domain.com",
@@ -210,7 +210,7 @@ fetcher.stopScheduler();
 ### Legacy ContentScheduler (Backward Compatible)
 
 ```typescript
-import { ContentFetcher, ContentScheduler } from "seotrove-sdk";
+import { ContentFetcher, ContentScheduler } from "@myriadcodelabs/seotrove-sdk";
 
 const fetcher = new ContentFetcher({
   domain: "your-domain.com",
@@ -227,7 +227,7 @@ scheduler.stop(); // No arguments needed
 ### New ContentScheduler (Multi-fetcher Support)
 
 ```typescript
-import { ContentScheduler } from "seotrove-sdk";
+import { ContentScheduler } from "@myriadcodelabs/seotrove-sdk";
 
 const scheduler = new ContentScheduler();
 
@@ -257,7 +257,7 @@ scheduler.stopAll();
 ### FileManager
 
 ```typescript
-import { FileManager } from "seotrove-sdk";
+import { FileManager } from "@myriadcodelabs/seotrove-sdk";
 
 // Write a file
 await FileManager.writeFile("./path/to/file.txt", "content");
