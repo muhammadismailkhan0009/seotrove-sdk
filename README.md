@@ -1,6 +1,7 @@
 # seotrove-sdk
 
-A TypeScript SDK for content fetching, file management, and scheduling.
+A server-side TypeScript SDK for retrieving SeoTrove public content, sitemap XML,
+and robots.txt.
 
 ## Installation
 
@@ -17,11 +18,44 @@ yarn add seotrove-sdk
 
 ## Features
 
-- **ContentFetcher**: Fetch content from SEOTrove API and sync to local files
-- **FileManager**: Utility functions for file operations
-- **ContentScheduler**: Schedule and manage content synchronization
-- **TypeScript Support**: Full TypeScript definitions included
-- **Server-Side Only**: Optimized for Node.js environments (Next.js, Express, etc.)
+- **Slug content delivery**: Fetch one READY_TO_PUBLISH page by domain and slug
+- **Sitemap and robots providers**: Retrieve ready-content sitemap XML and robots.txt
+- **TypeScript support**: Full TypeScript definitions included
+- **Server-side only**: Optimized for Node.js environments such as Next.js and Express
+- **Legacy file sync**: Existing sync helpers remain available for compatibility
+
+## Public Delivery Usage
+
+```typescript
+import { ContentFetcher, SeoTroveNotFoundError } from "seotrove-sdk";
+
+const seoTrove = new ContentFetcher({
+  domain: "your-domain.com",
+  installId: process.env.SEOTROVE_INSTALL_ID!,
+});
+
+try {
+  const content = await seoTrove.getContent({
+    slug: "how-mutual-consent-video-chat-works",
+  });
+
+  console.log(content.title);
+  console.log(content.html);
+} catch (error) {
+  if (error instanceof SeoTroveNotFoundError) {
+    // Return the target framework's 404 response.
+  }
+  throw error;
+}
+```
+
+```typescript
+const sitemapXml = await seoTrove.getSitemap();
+const robotsTxt = await seoTrove.getRobots();
+```
+
+The SDK is intended to run on the target website server. Do not expose
+`installId` in browser-side JavaScript.
 
 ## Setup with Vite React (Server-Side)
 
@@ -149,7 +183,7 @@ function ContentSyncButton() {
 export default ContentSyncButton;
 ```
 
-## Usage
+## Legacy Sync Usage
 
 ### ContentFetcher
 

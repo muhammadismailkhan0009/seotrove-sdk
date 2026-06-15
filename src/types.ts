@@ -12,7 +12,28 @@ export interface ContentPage {
 export interface ContentFetcherConfig {
     domain: string;
     installId: string;
-    targetDirectory: string;
+    targetDirectory?: string;
+    apiBaseUrl?: string;
+}
+
+export interface PublicContentRequest {
+    domain?: string;
+    slug: string;
+}
+
+export interface PublicDomainRequest {
+    domain?: string;
+}
+
+export interface PublicContentPage {
+    domain: string;
+    slug: string;
+    title: string;
+    metaTitle: string;
+    metaDescription: string;
+    html: string;
+    summary: string;
+    updatedAt: string;
 }
 
 export interface SyncResult {
@@ -20,4 +41,11 @@ export interface SyncResult {
     message: string;
     filesCreated: string[];
     errors?: string[];
+}
+
+export class SeoTroveNotFoundError extends Error {
+    constructor(message = 'SeoTrove content was not found') {
+        super(message);
+        this.name = 'SeoTroveNotFoundError';
+    }
 }

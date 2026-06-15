@@ -5,5 +5,9 @@ export type {
     ContentApiResponse,
     ContentPage,
     ContentFetcherConfig,
+    PublicContentRequest,
+    PublicDomainRequest,
+    PublicContentPage,
     SyncResult
 } from './types';
+export { SeoTroveNotFoundError } from './types';

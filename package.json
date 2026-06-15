@@ -21,7 +21,8 @@
     "dev": "tsup --watch",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test tests/*.test.mjs"
   },
   "keywords": [
     "content-fetcher",

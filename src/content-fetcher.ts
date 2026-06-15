@@ -1,5 +1,13 @@
 import path from 'path';
-import { ContentApiResponse, ContentFetcherConfig, SyncResult } from './types';
+import {
+    ContentApiResponse,
+    ContentFetcherConfig,
+    PublicContentPage,
+    PublicContentRequest,
+    PublicDomainRequest,
+    SeoTroveNotFoundError,
+    SyncResult
+} from './types';
 import { FileManager } from './file-manager';
 
 // Check if we're in a browser environment
@@ -16,8 +24,33 @@ export class ContentFetcher {
         this.config = config;
     }
 
+    async getContent(request: PublicContentRequest): Promise<PublicContentPage> {
+        const domain = request.domain ?? this.config.domain;
+        const url = this.sdkUrl(domain, `content/${encodeURIComponent(request.slug)}`);
+        const response = await fetch(url);
+
+        if (response.status === 404) {
+            throw new SeoTroveNotFoundError(`No ready SeoTrove content found for ${domain}/${request.slug}`);
+        }
+        if (!response.ok) {
+            throw new Error(`SeoTrove content request failed: ${response.status} ${response.statusText}`);
+        }
+
+        return await response.json() as PublicContentPage;
+    }
+
+    async getSitemap(request: PublicDomainRequest = {}): Promise<string> {
+        const domain = request.domain ?? this.config.domain;
+        return await this.fetchTextRoute(domain, 'sitemap', 'sitemap');
+    }
+
+    async getRobots(request: PublicDomainRequest = {}): Promise<string> {
+        const domain = request.domain ?? this.config.domain;
+        return await this.fetchTextRoute(domain, 'robots', 'robots.txt');
+    }
+
     async fetchContent(): Promise<ContentApiResponse> {
-        const url = `https://api.seotrove.com/api/v1/sdk/${this.config.domain}/content?installId=${this.config.installId}`;
+        const url = this.sdkUrl(this.config.domain, 'content');
 
         console.log(`[${this.config.domain}] Fetching new content from: ${url}`);
 
@@ -49,7 +82,7 @@ export class ContentFetcher {
     }
 
     async fetchPreviouslyPublishedContent(): Promise<ContentApiResponse> {
-        const url = `https://api.seotrove.com/api/v1/sdk/${this.config.domain}/content/previously-published?installId=${this.config.installId}`;
+        const url = this.sdkUrl(this.config.domain, 'content/previously-published');
 
         console.log(`[${this.config.domain}] Fetching previously published content from: ${url}`);
 
@@ -128,6 +161,9 @@ export class ContentFetcher {
         const startTime = Date.now();
 
         try {
+            if (!this.config.targetDirectory) {
+                throw new Error('targetDirectory is required for file sync operations');
+            }
             const baseDir = path.resolve(this.config.targetDirectory);
 
             // Create sitemap.xml
@@ -423,5 +459,23 @@ export class ContentFetcher {
             .replace(/-+/g, '-')
             .replace(/^-|-$/g, '')
             .toLowerCase();
+    }
+
+    private async fetchTextRoute(domain: string, route: string, label: string): Promise<string> {
+        const response = await fetch(this.sdkUrl(domain, route));
+
+        if (response.status === 404) {
+            throw new SeoTroveNotFoundError(`SeoTrove ${label} was not found for ${domain}`);
+        }
+        if (!response.ok) {
+            throw new Error(`SeoTrove ${label} request failed: ${response.status} ${response.statusText}`);
+        }
+
+        return await response.text();
+    }
+
+    private sdkUrl(domain: string, route: string): string {
+        const baseUrl = (this.config.apiBaseUrl ?? 'https://api.seotrove.com').replace(/\/$/, '');
+        return `${baseUrl}/api/v1/sdk/${encodeURIComponent(domain)}/${route}?installId=${encodeURIComponent(this.config.installId)}`;
     }
 }
